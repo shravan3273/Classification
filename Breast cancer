@@ -1,0 +1,117 @@
+In this kernel am working on Breast cancer Diagnostic Datasets using k-nearest neighbors Before directly stepping into the code let me give a breif explanaton of knn knn is used for classification problems and it is supervised machine learning model steps followed by knn
+
+#step1:-Choose the number 'k' of neighbors.
+#step2:-Take the k nearest neighbors of the new data point, according to the euclidean distance(Here, new data point means a point from validation set or test set when we predict)
+#step3:-Among these k neighbors, count the no. of data points in each category.
+#step4:-Assign the new data point(we talking about step 2 data point) to the category where you counted the most neighbors.
+                                          #"your Model is ready"
+#####CODE
+STEP 1- Collecting the data
+We will utilise Breast cancer diagnostic dataset. It contains 569 observations and 32 Features.
+
+STEP 2-Exploring and preparing the data
+getwd()
+data = read.csv("../input/breastcancer.csv")
+str(data)
+dim(data)
+#Let's drop ID feature altogether.Regardless of Machine Learning method,ID variable should always be excluded.Neglecting to do so can lead to erroneous findings because the ID can be used to uniquely "predict" each example.Therefore, a model that includes an identifier  will suffer from overfitting,and is unlikely to generalize well to other data
+data <- data[-1]
+#Next, lets put our interest on outcome variable i.e.,"dianosis"
+table(data$diagnosis)
+  B   M 
+357 212 
+#Many R machine learning classifiers require that the target feature is coded as a factor,so lets recode
+data$diagnosis <- factor(data$diagnosis,
+                         levels=c("B","M"),
+                        labels = c("Benign","Malignant"))
+round(prop.table(table(data$diagnosis)) * 100,digits = 1)
+   Benign Malignant 
+     62.7      37.3 
+
+
+Transformation - normalizing numeric data
+#To normlaize these features,we need to create a normalize() function in R
+normalize <- function(x) {
+    return((x-min(x)) / (max(x) - min(x)))
+}
+
+#After executing the preceding code, the normalze() function is ready to use in R.
+#Lets test the function on a couple of vectors:
+normalize(c(1,2,3,4,5))
+normalize(c(10,20,30,40,50))
+0 0.25 0.5 0.75 1
+0 0.25 0.5 0.75 1
+#The function appears to be working correctly.
+#we can now apply the normlaize() function to the numeric feature in our data
+#lapply will return a list and we are converting it into data frame
+data[2:30] <- as.data.frame(lapply(data[2:30],normalize))
+
+
+Data Preparation - Creating training and test sets
+#let's subset the data sets into train and test sets
+library(caTools)
+split = sample.split(data$diagnosis,SplitRatio = 0.8)
+train = subset(data,split==TRUE)
+test = subset(data,split==FALSE)
+head(train)
+
+Step 3 - Training a model on the data
+#Equipped with our train and test sets, we are now ready to classify.
+#Training and classification using the knn()function is performed in a single function call.
+#install.packages("class")
+library(class)
+classifier = knn(train = train[,-1], test = test[,-1], cl = train$diagnosis, k = 21)
+The knn() function returns a factor vector of predicted labels for each example in the test dataset, which we have assigned to classifier. The next step of the process is to evaluate how well the predicted classes in the classifier match up with the known values in the test dataset.
+
+
+Step 4-Evaluating model performance
+#installed.packages("gmodels")
+library(gmodels)
+CrossTable(x = test[,1],y = classifier,prop.chisq=FALSE)
+ 
+   Cell Contents
+|-------------------------|
+|                       N |
+|           N / Row Total |
+|           N / Col Total |
+|         N / Table Total |
+|-------------------------|
+
+ 
+Total Observations in Table:  113 
+
+ 
+             | classifier 
+   test[, 1] |    Benign | Malignant | Row Total | 
+-------------|-----------|-----------|-----------|
+      Benign |        71 |         0 |        71 | 
+             |     1.000 |     0.000 |     0.628 | 
+             |     0.959 |     0.000 |           | 
+             |     0.628 |     0.000 |           | 
+-------------|-----------|-----------|-----------|
+   Malignant |         3 |        39 |        42 | 
+             |     0.071 |     0.929 |     0.372 | 
+             |     0.041 |     1.000 |           | 
+             |     0.027 |     0.345 |           | 
+-------------|-----------|-----------|-----------|
+Column Total |        74 |        39 |       113 | 
+             |     0.655 |     0.345 |           | 
+-------------|-----------|-----------|-----------|
+
+ 
+table(test[,1],classifier)
+
+           classifier
+            Benign Malignant
+  Benign        71         0
+  Malignant      3        39
+Step 5 - Improving model performance
+
+#we will attempt two simple variations on our previous classifier.
+#First, we will employ an alternative method for rescaling our numeric features i.e., Standardization
+#second, we will try several different values of k
+####Am not running the code here, but use this code:
+#data_standardize = as.data.frame(scale(data[,-1]))
+     #where, 
+            #scale = Built-in-function, which there  in library(caTools) 
+#Replace K values on our own
